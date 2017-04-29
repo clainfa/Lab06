@@ -6,9 +6,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.management.RuntimeErrorException;
 
+import it.polito.tdp.meteo.bean.Citta;
 import it.polito.tdp.meteo.bean.Rilevamento;
 
 public class MeteoDAO {
@@ -50,7 +53,7 @@ public class MeteoDAO {
 			st.setString(1, localita);
 			st.setInt(2, mese);
 			ResultSet res= st.executeQuery();
-			if(res.next()){
+			while(res.next()){
 				Rilevamento r= new Rilevamento(localita, res.getDate("Data"), res.getInt("Umidita"));
 				rilevamentiLocalMese.add(r);
 			}
@@ -76,7 +79,7 @@ public class MeteoDAO {
 			st.setInt(2, mese);
 			ResultSet res = st.executeQuery();
 			double result = 0.0;
-			if(res.next()){
+			while(res.next()){
 				result= res.getDouble("UmiditaMedia");
 			}
 			conn.close();
@@ -90,5 +93,56 @@ public class MeteoDAO {
 
 		
 	}
+	public List<String> getCities(){
+		final String sql = "SELECT DISTINCT localita FROM situazione";
+
+		try {
+			List<String> cities = new ArrayList<String>();
+
+			Connection conn = DBConnect.getInstance().getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				cities.add(rs.getString("localita"));
+			}
+
+			conn.close();
+			return cities;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+/*
+ * dato un mese restituisce la mappa <citta, umidita media>
+ */
+	public Map<String, Double> getAvgRilevamentiMese(int mese) {
+
+		final String sql = "SELECT localita, AVG(umidita) as umiditaMedia FROM situazione WHERE MONTH(Data) = ? GROUP BY localita";
+
+		try {
+			Map<String, Double> map = new TreeMap<String, Double>();
+
+			Connection conn = DBConnect.getInstance().getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, mese);
+
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				map.put(rs.getString("localita"), rs.getDouble("umiditaMedia"));
+			}
+
+			conn.close();
+			return map;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+	}
+
 
 }
